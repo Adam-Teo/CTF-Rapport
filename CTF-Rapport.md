@@ -18,44 +18,38 @@ att vara först med att plocka upp motståndarlagets flagga och föra den tillba
 
 #### Objekt Index
 
-![image](img/Object_Index_Wall_Floor.png)
-*Wall                            Red Floor                    Blue Floor*
-
-![[Object_Index_Player.png]]
-*Red Player                  Blue Player                  Red Flag Carrier         Blue Flag Carrier*
-
-![[Object_Index_Flagg_Base.png]]
-*Red Flag Base             Blue Flag Base            Empty Red Base           Empty Blue Base*                         
+![image](img/Object_Index.png)  
+                     
 
 
 #### Hur CTF fungerar
 Ett lag vinner genom att plocka upp motståndarlagets flagga och föra den tillbaka till sin bas. 
 
-![[Flag_Score.gif]]
+![image](img/Flag_Score.gif)  
 *Spelare blå tar det röda lagets flaggan tillbaka till sin egen bas och vinner spelet*
 
-###### Tagging
+#### Tagging
 Motståndare laget kan ta tillbaka sin flagga om de ockuperar samma position som den flaggbärande motståndaren. Detta sänder flaggan tillbaka till sin hem bas och den flaggbärande spelaren tillbaka till sin start punkt.
 
-![[Defensive_Action.gif]]
+![image](img/Defensive_Action.gif)  
 *Röd laget skyddar sin flagga genom att tagga de blåa spelarna som tar deras flaggan*
 
-###### Spelplan
+#### Spelplan
 Spelplanen består av ett grid på 17x17 där varje koordinat representerar ett objects position. 
 Väggar och spelarnas startpositioner är slumpvist utplacerad på spelplanen för att göra det svårare för spelarna att ta sig direkt till motståndare lagets flagga, detta tvingar agenten an hitta unika lösningar för varje match. 
 
 Värt att notera är att dessa väggar speglas på båda sidorna så varje spelhalva är symmetriskt jämställde så inget lag har fördel pga spelplanens utformning, dock kan de få en liten fördel pga startpositionerna som inte är speglade. flaggorna och baserna där flaggorna befinner sig dock alltid på samma ställe för att ge agenten en fast punkt att röra sig mot. 
 
-![[Mirrored_Walls.gif]]
+![image](img/Mirrored_Walls.gif)  
 *Exempel på olika framslumpade spelplaner*
 
-###### Synfält
+#### Synfält
 Spelarna ser bara en del av spelplanen, deras synfält är består av sex rutor framåt och tre åt vardera sida dvs 7x7. Detta blir en input bild som konverteras till en tensor och skickas till CNN som beräknar vilken typ av handling som kommer leda till störst reward för spelaren.
 
 Agenten kan utföra en av dessa tre handlingar varje steg; rotera 90° vänster, rotera 90° höger, gå framåt.
 Det finns även tre indirekta handlingar som sker automatiskt när agenten flyttar en spelaren till samma koordinat som ett specifikt object; plocka up en flagga, lämna in flaggan, tagga en fiende spelare som bär en flagga. 
 
-![[Player_Vision.png]]
+![image](img/Player_Vision.png)  
 *Den gula kanten visar vad den röda spelaren ser,  Triangeln visar den röda spelarens position, notera att den röda spelaren inte ser triangle dvs den ser inte sig själv*
 
 #### Agent och Spelare
@@ -69,19 +63,19 @@ Detta är intressanta konsekvens av arkitektur, det är mycket möjligt att viss
 ## Moduler & Verktyg
 Dessa är verktygen som används för att besvara Fråga A: *Hur kan Reinforcement Learning implementeras för att träna en agent att spela Capture the Flag* 
 
-###### Gymnasium
+#### Gymnasium
 *Gymnasium* modulen är en popular *Python* baserat *Reinforcement Learning* biblioteket.  *Gymnasium* utgör grundstommen i det här projektet då det hanterar det mesta som sker under ytan. *Gymnasium* gör följande; Hanterar game loopen med `step()`, initierar spelplanen med `reset()`,  hantera  de tre handlingar som agent kan ta med `Descret(3)`. Och  definierar hur inputen ska se ut via `Box()` dvs hur många färg kanaler, högsta lägsta pixel värdet, bildstorlek, bild format osv. 
 
-###### MiniGrid
+#### MiniGrid
 *MiniGrid* modulen bygger på *Gymnasium* och används för att skapa och rendera den 2-dimensionella spelvärld som agenten existerar i. Den tar den abstract numeriska 17x17 representationen och skalar upp den så varje koordinat blir en 12x12 pixel stor ruta. Dessa 12x12 stora pixel rutor är vad agenten ser. *MiniGrid* kommer med färdig definierad object som väggar, golv, spelare, dörrar osv. Och den skapar även regler för hur spelarna navigerar igenom miljön. 
 
-###### SuperSuit
+#### SuperSuit
 *SuperSuit* är en hjälpfunktion som kontrollerar at datan från *MiniGrid* matchar den definierade `Box()` funktionen i *Gymnasium*. Är datan i fel format så korrigeras den av *SuperSuit* så att *PPO-Algoritmen* inte kraschar. Kort sagt *SuperSuit* plattar till ut datan och ser till att den följer ett standardiserat format så *StabelBaseline3* kan hantera den. Den hanterar även *Frame Stacking* dvs den sammanfogar tre bilder till en sekvens för att ge context till inlärningen.
 
-###### StableBaselines3
+#### StableBaselines3
 Hanterar *PPO-Algoritmen* dvs den hanterar de neural nätverket, gradient och uppdaterar vikterna under träning. Den tar in observationerna och rewards och tar beslut om vilka vikter som ska uppdateras.
 
-###### PettingZoo
+#### PettingZoo
 *MiniGrid* och *Gymnasium* kan inte hantera multi-agent scenarion, *PettingZoo* tar hand om den biten, den håller koll på vilken spelares tur det är och ser till att varje spelare får rätt reward. 
 
 #### Data Flow
@@ -90,15 +84,15 @@ Hanterar *PPO-Algoritmen* dvs den hanterar de neural nätverket, gradient och up
 ## Träning 
 Denna del beskriver hur *Reinforcement Learning* processen fungerar och ger svar på  Fråga A: *"Hur kan Reinforcement Learning implementeras för att träna en agent att spela Capture the Flag"* 
 
-1) Pre-Game
+1) Pre-Game  
 	`reset()` funktionen genererar ett  17x17 gird med object, vissa av dessa som spelar positioner och väggar placeras ut slumpmässigt. Detta är en abstract numerisk representation av världen som kommer användas för att rendera grafiken. Spelarna får även roller tilldelade baserat vem som är närmast sin egen flagga.
 
-2. Observation
+2. Observation  
 	Agenten tittar igenom varje spelares synfält och samlar in datan i en tensor form som representerar en bild som är 84 pixlar hög 84 pixlar bred och har 3 färg kanaler. Denna bild är en grafisk representation av en 7x7 bit av den 17x17 stora grid världen som agenten kan se. 
 	
 	Anledningen till varför vi använder en *CNN* och inte bara skickar den råa datan direkt från *MiniGrid* till vårt *Neurala Nätverk* är för att simulera ett verkligt scenario där agenten inte har tillgång till källkoden utan, likt en människa, bara kan se en visuell representation av spelet i form av en serie bilder. Fördelen är att  agenten blir mer generell och att den, i teorin, kommer kunna tränas på liknande spel utan att behöva ändra den grundläggande arkitekturen. Nackdelen är att träningen tar längre tid då den behöver behandla en större mängd information.
 
-3) Input
+3) Input  
 	*Frame Stacking* används för att ge träningen mer kontext genom att stacka 3 frames på varandra. De stackade frames kan sees som en multiplication av färg kanaler dvs 3 frames x 3 färg kanaler skapar 9 dimensioner, vilket gör inputen till 84x84x9. 
 
 	För att snabba up träningen används *Multi Environment*  dvs 4 environments tränas parallellt, med varandra. Eftersom vardera environment innehåller 4 spelare så får vi 4x4, totalt 16. Så den slutgiltiga batch sizes är 84x84x9x16. 
@@ -109,7 +103,7 @@ Denna del beskriver hur *Reinforcement Learning* processen fungerar och ger svar
 
 	Värt att notera är hyperparametern`n_steps`, detta är en buffer som styr hur mycket data som samla sin dvs hur många steps som går innan vikterna uppdateras. 
 . 
-4) Handlingar
+4) Handlingar  
 	*PPO-algoritmen* dvs det *Neurala Nätverket* behandlar input datan och får ut en logits för varje handling som beskriver hur "bra" den tror tre olika handlingarna är. 
 	
 	Vid Inference dvs om agenten inte tränas utan spelar en testmatch så väljer agenten den handling som har högst sannolikhet att ge störst reward dvs har högst logit värde. 
@@ -123,14 +117,14 @@ Denna del beskriver hur *Reinforcement Learning* processen fungerar och ger svar
 
 	Efter att alla actions utförts så uppdateras världen och de nya positionerna sparas. 
 	
-5) Reward
+5) Reward  
 	*MiniGrid* skickar tillbaka rewards till *PPO-algoritmen* där delas detta upp i två delar, *Aktör* och *Kritiker*.
 
 	*Kritikern* jämför det faktiska utfallet med det förväntade utfallet och räknar ut  *Advantage* som är mellan skillnaden på dessa två tal. 
 
 	*Aktören* får *Advantage* talet från *Kritikern*, om den är positive dvs om handlingen är bättre än förväntat så uppdateras vikterna så att en sådan action blir mer sannolik. Är resultatet negativts så ändras vikterna så den handlingen blir mindre sannolik och om *Advantage* är noll dvs förutsägelsen stämmer överens med verkligheten så behöver inte vikterna justeras.  
 
-6) End State
+6) End State  
 	Det finns tre möjlig *end states*:
 	 
 	A: Den sammanlagda mängde steg överskrider stop-villkors gränsen så avslutas träningen och agenten dvs vikterna sparas till disk.
@@ -168,7 +162,7 @@ I början av träningen så slumpas alla viker fram och sedan justeras dess vikt
 ###### batch_size
 Avgör hur stora data chunks som behandlas på samma gång, med en stark GPU klarar av större batch sizes vilket ökar träningshastigheten.
 
-##### n_steps
+###### n_steps
 Hur stor buffert är dvs hur mycket data som samlas in dvs hur många steps som går innan spelet pausas och träningen drar igång
 
 ###### num_vec_envs
@@ -229,37 +223,37 @@ Tanken är att ge de olika spelarna i laget olika roller, rollerna *'Attacker'* 
 
 Alla i projektet va med och utvecklade flera olika delar, vi hade ingen skarp uppdelning utan folk tog över där andra slutade och vi hjälpte varandra. Vissa delar implementerades av en gruppmedlem, andra av två eller tre medlemmar och vissa delar hjälpte alla till med. De följande delar är de som jag spenderade mest tid på.
 
-#### Förundersökning
+### Förundersökning
 Det va inte helt självklart att vi skulle köra *Capture the Flag*, vi visste att vi ville testa *Reinforcement Learning* i någon form men inte mer än så. Jag började med att bygga små och väldigt enkla *Reinforcement* project kompletta med neurala nätverk byggda från grunden i torch men jag tog hjälp av LLM till mycket av kodandet.
 
-###### Fire Escape
+#### Fire Escape
 Mitt första lilla project, designat för att vara så simpelt som möjligt allt agenten behövde lära sig att hitta till utgången i ett litet 6x6 grid. Detta va simpelt att implementera och gick snabbt att träna. Projektet hade potential till att utvecklas till en mer komplex *Maze Solver*, men det va inte riktigt vad gruppen va intresserad av då vi vill ha två agenter som tävlade emot varandra.
 
-![[Fire_Escape.gif]]
-###### Hunter & Prey
+![image](img/Fire_Escape.gif)  
+#### Hunter & Prey
 I detta spel är miljön fortfarande 2d grid men nu har vi istället två agenter med varsitt neuralt nätverk och unika *victory conditions*. Den ena agenten tar rollen som *prey* och likt pack-man får *prey* poäng för varje ny koordinat den besöker. *Prey's victory condition* är att samla ett visst antal poäng.  *Hunter* agentens *victory condition* är att fånga *Prey* agenten.
 
 Detta va ett betydligt mer komplext spel och jag fick implementera betydligt mer rewards för att få agenterna att förstå hur de spelar spelet. Jag implemented *Vision* och gave *Hunter* en större *Vision Box* än *Prey* för att den skulle kunna upptäcka och *Prey* innan *Prey* upptäckte *Hunter*. Eftersom *Hunter* behövde kunna hinna ifatt *Prey* så rör den sig  två steg i taget, vilket gör den snabbare kommer i fatt men får svårare att få tag i *Prey*. Med lite trixande så fick jag agenterna att spela spelet som det va tänkt, *Hunter* jagar *Prey* och ibland hinner *Hunter* i fatt och fångar *Prey* och ibland gör den det inte.
 
 Detta konceptet va mer lovande men vi kände att vi ville ha ett spel där båda agenterna hade samma förutsättning.
 
-![[Hunter_Prey.gif]]
-###### Simple Chess 
+![image](img/Hunter_Prey.gif)  
+#### Simple Chess 
 Här gick jag en liten annan väg och implementerade ett tur baserat brädspel, jag insåg rätt fort att schack va lite väl komplicerat så jag gjorde en mindre version som spelades på ett litet bräde med bara två typer av pjäser, torn och löpare, jag begränsade även deras *movement* till max två rutor per steg. För att göra träningen snabbar satt jag även en *turn limit* och gav vinsten till den spelare som tagit flest av motståndarens pjäser. Detta fungerade bra och agenten hade nu, till skillnad från *Hunter Prey*, sikt över hela brädet och spelade mot sig själv vilket gjorde att samma nätverk och vikter kunde användas för båda sidor. 
 
 Ett problem som snabbt uppstod va att agenten hamnade i ett lokalt minimum då den gjorde exakt samma drag spel efter spel. Detta löstes genom att randomisera startpositionerna på pjäserna och spelet blev betydligt mer dynamiskt. 
 
-![[Simple_Chess.gif]]
+![image](img/Simple_Chess.gif)  
 
-###### Capture The Flag
+#### Capture The Flag
 Efter lite diskuterande kom vi fram till att vi vill ha ett *Reinforcement Learning* spel med minst två agenter som hade samma förutsättningar och vi fastnade för *Capture the Flag*. Vi tänkte att detta *CTF* är enkelt nog för att kunna träna relativt snabbt men komplext nog för att vi ska kunna få fram agenterna som visa tecken på lite olika temperament och taktiker. 
 
 Jag slog ihop ett snabbt test med en spelplan, två agenter, väggar och experimenterade lite med lite olika rewards och fick dom att nästan spela spelet. Jag märket att en *heat map* baserad reward va väldigt effektivt, genom att ge agenterna en reward som ökade ju närmare de kom motståndarens flagga så skapade man en kraftfull "*funnel effect*" som snabbt lärde agenterna att snabbt ta sig mot målet.
 
  Vi gillade konceptet men i slutändan bestämde vi oss för att köra med *MiniGrid*, vi ansåg att de färdigbyggda verktygen skulle göra det snabbare och enklare att träna agenterna.
 
-![[Simple_CTF.gif]]
-#### Två mot Två
+![image](img/Simple_CTF.gif)  
+### Två mot Två
 Det va inte självklart att köra med två spelare i varje lag, en mot en hade troligen varit snabbare och lättare att träna men med två spelare i varje lag öppnade upp möjligheterna för samarbete och mer komplex interaction vilket vägde tyngre än en snabb tränad modell. Jag hade en stor del i implementeringen av två mot två funktionaliteten. 
 
 Allt blev lite mer komplicerat med fyra spelare och de va många små delar i koden som fick skrivas om. 
@@ -268,7 +262,7 @@ Det största problemet va att *MiniGrid*  inte va gjort för att hantera två ag
 
 Vi va även tvungna att modifiera *MiniGrid* arkitekturen eftersom spelaren aldrig såg sig själv i original versionen, spelaren renderades aldrig i sin egen vision box så vi fick fixa så alla spelare renderades ut så agenten kunde se dom. Färg va också viktigt att ha för nu blev agenterna tvungna att urskilja mellan lagkamrater och motståndare, i en mot en så fans det bara en spelare som agenten kunde se. Jag implementerade även lite visuella ändringar, jag gjorde att spelaren som plockade upp flaggan bytte ikon från en boll till en nyckel, på så sätt kunde agenterna tydligen urskilja om en motståndare bar på flaggan eller inte.
 
-#### Träning och Testning
+### Träning och Testning
 Under denna del va det verkligen alle man på deck. Projektet lämpade sig väll för grupparbete då alla kunde träna sina egna agenter och mixtra med rewards och hyperparametrar vilket, tycker jag, va den största utmaningen i projekten. Vi kunde sen enkelt testa agenterna genom att köra en tournament vilket va ett roligt och tydligt sätt att utvärdera våra agenter.
 
 
@@ -304,7 +298,7 @@ Iden med penalty parametrarna va god men det visade sig vara väldigt känsliga 
 #### Pick Up Flagg and  Getting Tagged Loop
 Det visade sig oerhört viktigt att sätta en relativt hög reward för flagg inlämning annars upptäckte agenten att om avslutade spelet snabbt genom att lämna in flaggan så fick den betydlig mindre rewards än om plockade upp motståndarens flag och lät sig bli taggad om och om igen. Detta ledde till en situation där spelaren, efter att ha plockat upp flaggan, stannade kvar i motståndarens bas.
 
-![[Defensive_Action.gif]]
+![image](img/Defensive_Action.gif)  
 
 #### Player Vison
 Synfälts aspekten debatterades under projektets gång. Spelet kunde implementeras med full visions för alla spelare men hypotesen va att detta skulle leda till ett mer schack likt beteende, men vad vi va ute efter va att simulera spelare med ett beteende mer likt levande organismer snarare än pjäser på ett bräde. Genom att ge spelarna en ett begränsat synfält så blir de tvungna att söka runt sig i miljön vilket kan sees som ett mer naturligt beteende. 
@@ -317,7 +311,7 @@ Man kunde tydligt se om en agent tränad på en stor eller liten miljö, agenter
 
 En annat exempel på guidning kan ses i bilden nedan där golvet på de olika sidorna av miljön har olika färg vilket ger agenten en extra reference punkt som potentiellt kan hjälpa den att hitta fram och tillbaka mellan baserna.
 
-![[Player_Vision.png]]
+![image](img/Player_Vision.png)  
 *Den gula kanten visar vad den röda spelaren, Triangeln, ser*
 
 ## Slutsats
