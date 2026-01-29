@@ -18,7 +18,7 @@ att vara först med att plocka upp motståndarlagets flagga och föra den tillba
 
 #### Objekt Index
 
-![[Object_Index_Wall_Floor.png]]
+![[img/Object_Index_Wall_Floor.png]]
 *Wall                            Red Floor                    Blue Floor*
 
 ![[Object_Index_Player.png]]
